@@ -1,17 +1,33 @@
 package model
 
+import java.util.concurrent.atomic.AtomicLong
+
 import play.api.Play
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.db.slick.DatabaseConfigProvider
+
 import scala.concurrent.Future
 import slick.driver.JdbcProfile
 import slick.driver.MySQLDriver.api._
+
 import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.json.{JsValue, Json, Writes}
 
-case class User(id: Long, firstName: String, lastName: String, mobile: Long, email: String)
+case class User(id: Long,
+                firstName: String,
+                lastName: String,
+                mobile: Long,
+                email: String)
 
-case class UserFormData(firstName: String, lastName: String, mobile: Long, email: String)
+object ToJson {
+  implicit lazy val userJson = Json.format[User]
+}
+
+case class UserFormData(firstName: String,
+                        lastName: String,
+                        mobile: Long,
+                        email: String)
 
 object UserForm {
 
@@ -27,14 +43,14 @@ object UserForm {
 
 class UserTableDef(tag: Tag) extends Table[User](tag, "user") {
 
-  def id = column[Long]("id", O.PrimaryKey,O.AutoInc)
+  def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
   def firstName = column[String]("first_name")
   def lastName = column[String]("last_name")
   def mobile = column[Long]("mobile")
   def email = column[String]("email")
 
   override def * =
-    (id, firstName, lastName, mobile, email) <>(User.tupled, User.unapply)
+    (id, firstName, lastName, mobile, email) <> (User.tupled, User.unapply)
 }
 
 object Users {
@@ -44,9 +60,12 @@ object Users {
   val users = TableQuery[UserTableDef]
 
   def add(user: User): Future[String] = {
-    dbConfig.db.run(users += user).map(res => "User successfully added").recover {
-      case ex: Exception => ex.getCause.getMessage
-    }
+    dbConfig.db
+      .run(users += user)
+      .map(_ => "User successfully added")
+      .recover {
+        case ex: Exception => ex.getCause.getMessage
+      }
   }
 
   def delete(id: Long): Future[Int] = {

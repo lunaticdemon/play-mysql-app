@@ -1,4 +1,4 @@
-name := """slick3play"""
+name := """slick-play-mysql"""
 
 version := "1.0-SNAPSHOT"
 
